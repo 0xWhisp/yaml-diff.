@@ -111,3 +111,20 @@ def load_yaml(source: str) -> Any:
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
         raise YamlDiffError(f"YAML parse error in '{source}': {e}")
+
+
+def canonicalize(data: Any) -> Any:
+    """
+    Recursively sort dict keys and normalize types for consistent comparison.
+    
+    Args:
+        data: YAML value (dict, list, or primitive)
+        
+    Returns:
+        Canonicalized value with sorted dict keys
+    """
+    if isinstance(data, dict):
+        return {k: canonicalize(v) for k, v in sorted(data.items())}
+    if isinstance(data, list):
+        return [canonicalize(item) for item in data]
+    return data
