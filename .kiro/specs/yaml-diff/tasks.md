@@ -31,74 +31,129 @@
 
     - _Requirements: 10.2_
 
-- [ ] 2. Implement core data structures and error handling
-  - [ ] 2.1 Implement `YamlDiffError` exception class
+- [x] 2. Implement core data structures and error handling
+
+
+
+
+
+
+  - [x] 2.1 Implement `YamlDiffError` exception class
+
     - Custom exception for yaml-diff specific errors
     - _Requirements: 1.5, 6.4_
-  - [ ] 2.2 Implement `DiffOp` dataclass
+
+  - [x] 2.2 Implement `DiffOp` dataclass
+
+
+
+
+
     - Fields: op, path, old_value, new_value
     - Support for 'add', 'remove', 'replace' operations
     - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 3. Implement YAML loading and validation
-  - [ ] 3.1 Implement `load_yaml()` function
+- [x] 3. Implement YAML loading and validation
+
+
+
+
+  - [x] 3.1 Implement `load_yaml()` function
+
+
     - Load from file path or stdin (when path is '-')
     - Use yaml.safe_load for parsing
     - Handle file not found and read errors
     - _Requirements: 1.1, 1.2, 7.5_
-  - [ ] 3.2 Implement `check_unsupported_features()` function
+  - [x] 3.2 Implement `check_unsupported_features()` function
+
+
     - Detect anchors (&) and aliases (*) in raw YAML content
     - Detect custom tags (!)
     - Raise YamlDiffError with clear message
     - _Requirements: 7.4, 8.1, 8.2_
-  - [ ] 3.3 Write property test for YAML loading
+  - [x] 3.3 Write property test for YAML loading
+
+
     - **Property 5: Identity Property** - any valid YAML loaded and compared to itself produces empty diff
     - **Validates: Requirements 2.4, 4.5, 6.2**
 
-- [ ] 4. Implement canonicalization
-  - [ ] 4.1 Implement `canonicalize()` function
+- [x] 4. Implement canonicalization
+
+
+
+
+
+
+  - [x] 4.1 Implement `canonicalize()` function
+
     - Recursively sort dict keys
     - Preserve list order
     - Normalize primitives
     - _Requirements: 1.3_
-  - [ ] 4.2 Write property test for key ordering invariance
+
+  - [x] 4.2 Write property test for key ordering invariance
+
     - **Property 1: Key Ordering Invariance** - shuffled keys produce empty diff
     - **Validates: Requirements 1.3**
 
-- [ ] 5. Implement diff engine
-  - [ ] 5.1 Implement `compute_diff()` main function
+- [x] 5. Implement diff engine
+
+
+
+
+
+
+  - [x] 5.1 Implement `compute_diff()` main function
+
     - Dispatch to appropriate diff function based on types
     - Handle type mismatches (map vs list vs primitive)
     - _Requirements: 7.3_
-  - [ ] 5.2 Implement `diff_maps()` function
+
+  - [x] 5.2 Implement `diff_maps()` function
+
     - Find added keys (in new but not old)
     - Find removed keys (in old but not new)
     - Find changed keys (in both but different values)
     - Recurse for nested structures
+
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
-  - [ ] 5.3 Implement `diff_lists()` function
+
+  - [x] 5.3 Implement `diff_lists()` function
     - Index-based comparison
     - Handle different lengths (additions/removals)
     - Recurse for nested structures
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
-  - [ ] 5.4 Implement `diff_primitives()` function
+  - [x] 5.4 Implement `diff_primitives()` function
     - Compare primitive values (str, int, float, bool, None)
     - Return replace operation if different
     - _Requirements: 2.3_
-  - [ ] 5.5 Write property test for map diff correctness
+  - [x] 5.5 Write property test for map diff correctness
+
+
     - **Property 2: Map Diff Correctness** - add/remove/replace operations are correct
+
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
-  - [ ] 5.6 Write property test for list diff correctness
+
+  - [x] 5.6 Write property test for list diff correctness
+
     - **Property 4: List Diff Correctness** - index-based operations are correct
+
     - **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
-  - [ ] 5.7 Write property test for recursive diff
+
+  - [x] 5.7 Write property test for recursive diff
     - **Property 3: Recursive Diff Correctness** - nested changes detected at correct paths
     - **Validates: Requirements 2.5, 3.5**
-  - [ ] 5.8 Write property test for type change detection
+  - [x] 5.8 Write property test for type change detection
     - **Property 8: Type Change Detection** - type mismatches produce replace operations
     - **Validates: Requirements 7.3**
 
-- [ ] 6. Checkpoint - Ensure all tests pass
+- [x] 6. Checkpoint - Ensure all tests pass
+
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Implement output formatters
