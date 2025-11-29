@@ -25,3 +25,17 @@ from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import yaml
+
+
+class YamlDiffError(Exception):
+    """Custom exception for yaml-diff specific errors."""
+    pass
+
+
+@dataclass
+class DiffOp:
+    """Represents a single diff operation."""
+    op: str  # 'add', 'remove', 'replace'
+    path: List[str]  # JSON pointer path segments
+    old_value: Any = None  # Previous value (for remove/replace)
+    new_value: Any = None  # New value (for add/replace)
