@@ -1,0 +1,6 @@
+# Core dependencies
+pyyaml>=6.0
+
+# Development/testing dependencies
+hypothesis>=6.0
+pytest>=7.0

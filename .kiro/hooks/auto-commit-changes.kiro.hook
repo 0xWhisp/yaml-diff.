@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Auto Commit Changes",
+  "description": "Commits all staged and unstaged changes with a short, human-readable commit message in present tense, imperative mood (e.g., \"add yaml parser\", \"fix diff bug\").",
+  "version": "1",
+  "when": {
+    "type": "agentEnd"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review all changes made during this session using git diff and git status. Stage all changes with git add, then commit with a short, human-readable message in present tense, imperative mood (e.g., \"add yaml parser\", \"fix diff bug\"). Keep the message concise and descriptive of what was done."
+  }
+}
