@@ -39,3 +39,75 @@ class DiffOp:
     path: List[str]  # JSON pointer path segments
     old_value: Any = None  # Previous value (for remove/replace)
     new_value: Any = None  # New value (for add/replace)
+
+
+def check_unsupported_features(content: str, source_name: str) -> None:
+    """
+    Check for unsupported YAML features before parsing.
+    
+    Args:
+        content: Raw YAML content string
+        source_name: Name of the source for error messages
+        
+    Raises:
+        YamlDiffError: If anchors, aliases, or custom tags are detected
+    """
+    import re
+    
+    # Check for anchors (&name) - but not & in strings
+    # Look for & followed by word characters at start of value position
+    if re.search(r'(?:^|[\s\[\{,])&\w+', content, re.MULTILINE):
+        raise YamlDiffError(
+            f"Anchors are not supported: {source_name}\n"
+            "  yaml-diff does not support YAML anchors (&) and aliases (*)"
+        )
+    
+    # Check for aliases (*name) - but not * in strings
+    if re.search(r'(?:^|[\s\[\{,])\*\w+', content, re.MULTILINE):
+        raise YamlDiffError(
+            f"Aliases are not supported: {source_name}\n"
+            "  yaml-diff does not support YAML anchors (&) and aliases (*)"
+        )
+    
+    # Check for custom tags (!tag) - but not !! (standard tags are ok)
+    # Custom tags start with single ! followed by non-! character
+    if re.search(r'(?:^|[\s\[\{,])![^!\s]', content, re.MULTILINE):
+        raise YamlDiffError(
+            f"Custom tags are not supported: {source_name}\n"
+            "  yaml-diff does not support custom YAML tags (!)"
+        )
+
+
+def load_yaml(source: str) -> Any:
+    """
+    Load YAML from file path or stdin.
+    
+    Args:
+        source: File path or '-' for stdin
+        
+    Returns:
+        Parsed YAML as Python object (dict, list, or primitive)
+        
+    Raises:
+        YamlDiffError: On file not found, read error, or parse failure
+    """
+    try:
+        if source == '-':
+            content = sys.stdin.read()
+        else:
+            with open(source, 'r', encoding='utf-8') as f:
+                content = f.read()
+    except FileNotFoundError:
+        raise YamlDiffError(f"File not found: {source}")
+    except PermissionError:
+        raise YamlDiffError(f"Permission denied: {source}")
+    except IOError as e:
+        raise YamlDiffError(f"Cannot read file '{source}': {e}")
+    
+    # Check for unsupported features before parsing
+    check_unsupported_features(content, source)
+    
+    try:
+        return yaml.safe_load(content)
+    except yaml.YAMLError as e:
+        raise YamlDiffError(f"YAML parse error in '{source}': {e}")
