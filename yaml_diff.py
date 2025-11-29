@@ -128,3 +128,120 @@ def canonicalize(data: Any) -> Any:
     if isinstance(data, list):
         return [canonicalize(item) for item in data]
     return data
+
+
+def diff_primitives(old: Any, new: Any, path: List[str]) -> List[DiffOp]:
+    """
+    Compare primitive values (str, int, float, bool, None).
+    
+    Args:
+        old: First primitive value
+        new: Second primitive value
+        path: Current path
+        
+    Returns:
+        List with single replace operation if different, empty if equal
+    """
+    if old == new:
+        return []
+    return [DiffOp('replace', path, old, new)]
+
+
+def diff_maps(old: dict, new: dict, path: List[str]) -> List[DiffOp]:
+    """
+    Compare two dicts, finding added/removed/changed keys.
+    
+    Args:
+        old: First dict
+        new: Second dict
+        path: Current path
+        
+    Returns:
+        List of DiffOp objects for all differences
+    """
+    diffs = []
+    all_keys = set(old.keys()) | set(new.keys())
+    
+    for key in sorted(all_keys, key=str):
+        key_path = path + [str(key)]
+        
+        if key not in old:
+            # Key added in new
+            diffs.append(DiffOp('add', key_path, None, new[key]))
+        elif key not in new:
+            # Key removed from old
+            diffs.append(DiffOp('remove', key_path, old[key], None))
+        elif old[key] != new[key]:
+            # Key exists in both but values differ - recurse
+            diffs.extend(compute_diff(old[key], new[key], key_path))
+    
+    return diffs
+
+
+def diff_lists(old: list, new: list, path: List[str]) -> List[DiffOp]:
+    """
+    Compare two lists by index position.
+    
+    Args:
+        old: First list
+        new: Second list
+        path: Current path
+        
+    Returns:
+        List of DiffOp objects for all differences
+    """
+    diffs = []
+    max_len = max(len(old), len(new))
+    
+    for i in range(max_len):
+        idx_path = path + [str(i)]
+        
+        if i >= len(old):
+            # Element added in new
+            diffs.append(DiffOp('add', idx_path, None, new[i]))
+        elif i >= len(new):
+            # Element removed from old
+            diffs.append(DiffOp('remove', idx_path, old[i], None))
+        elif old[i] != new[i]:
+            # Element exists in both but values differ - recurse
+            diffs.extend(compute_diff(old[i], new[i], idx_path))
+    
+    return diffs
+
+
+def compute_diff(old: Any, new: Any, path: Optional[List[str]] = None) -> List[DiffOp]:
+    """
+    Recursively compute differences between two YAML structures.
+    
+    Dispatches to appropriate diff function based on types.
+    Handles type mismatches by returning a replace operation.
+    
+    Args:
+        old: First YAML value
+        new: Second YAML value
+        path: Current path (for recursive calls)
+        
+    Returns:
+        List of DiffOp objects representing the differences
+    """
+    if path is None:
+        path = []
+    
+    # If values are equal, no diff
+    if old == new:
+        return []
+    
+    # Handle type mismatches - replace the entire value
+    old_type = type(old)
+    new_type = type(new)
+    
+    if old_type != new_type:
+        return [DiffOp('replace', path, old, new)]
+    
+    # Dispatch to appropriate diff function based on type
+    if isinstance(old, dict):
+        return diff_maps(old, new, path)
+    elif isinstance(old, list):
+        return diff_lists(old, new, path)
+    else:
+        return diff_primitives(old, new, path)
