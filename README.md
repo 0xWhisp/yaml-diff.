@@ -1,45 +1,48 @@
 # yaml-diff
 
-A minimal CLI tool for semantic YAML comparison. Compares two YAML files ignoring key ordering, comments, and formatting — showing only actual data differences.
+[![Tests](https://github.com/0xWhisp/yaml-diff/actions/workflows/test.yml/badge.svg)](https://github.com/0xWhisp/yaml-diff/actions)
+[![Coverage Status](https://coveralls.io/repos/github/0xWhisp/yaml-diff/badge.svg?branch=master)](https://coveralls.io/github/0xWhisp/yaml-diff?branch=master)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Overview
+Semantic YAML comparison tool. Compares two YAML files ignoring key ordering, comments, and formatting — outputs only actual data differences.
 
-yaml-diff parses two YAML files, canonicalizes them (sorting keys, stripping comments), and computes a structural diff. Output is either human-readable (with optional colors) or JSON-patch format (RFC 6902).
+## Why yaml-diff?
 
-Perfect for:
-- Comparing Kubernetes manifests
-- Reviewing CI/CD config changes
-- Diffing any YAML configuration files
+Standard `diff` tools compare files line-by-line, flagging irrelevant changes like key reordering or whitespace. yaml-diff parses YAML semantically, so you see what actually changed.
+
+```bash
+# These are semantically identical:
+# file1.yaml          # file2.yaml
+# name: app           # port: 8080
+# port: 8080          # name: app
+
+$ yaml-diff file1.yaml file2.yaml
+# No output - files are identical
+```
 
 ## Installation
 
-**Requirements:** Python 3.7+ and PyYAML
+Requires Python 3.7+ and PyYAML.
 
 ```bash
-# Install dependencies
 pip install pyyaml
-
-# Run directly
-python yaml_diff.py file1.yaml file2.yaml
 ```
 
-Or clone and use:
+Clone and run:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/0xWhisp/yaml-diff.git
 cd yaml-diff
-pip install -r requirements.txt
 python yaml_diff.py --help
 ```
 
 ## Usage
 
 ```bash
-# Basic comparison (human-readable output)
+# Compare two files
 python yaml_diff.py old.yaml new.yaml
 
 # JSON-patch output (RFC 6902)
-python yaml_diff.py old.yaml new.yaml --json-patch
 python yaml_diff.py old.yaml new.yaml -j
 
 # Read from stdin
@@ -53,13 +56,13 @@ python yaml_diff.py old.yaml new.yaml --no-color
 
 | Code | Meaning |
 |------|---------|
-| 0 | Files are identical |
+| 0 | Files identical |
 | 1 | Files differ |
-| 2 | Error (parse failure, file not found, invalid args) |
+| 2 | Error |
 
-### Example Output
+### Output Examples
 
-**Human-readable (default):**
+Human-readable (default):
 
 ```
 /server/port:
@@ -69,55 +72,39 @@ python yaml_diff.py old.yaml new.yaml --no-color
 /database/host:
   - localhost
   + db.example.com
-
-/features/new_feature:
-  + true
 ```
 
-**JSON-patch (`-j` flag):**
+JSON-patch (`-j`):
 
 ```json
 [
   {"op": "replace", "path": "/server/port", "value": 9090},
-  {"op": "replace", "path": "/database/host", "value": "db.example.com"},
-  {"op": "add", "path": "/features/new_feature", "value": true}
+  {"op": "replace", "path": "/database/host", "value": "db.example.com"}
 ]
 ```
 
 ## Limitations
 
-- **No anchors/aliases:** YAML anchors (`&name`) and aliases (`*name`) are not supported. The tool will reject files containing these features with a clear error message.
+- **No anchors/aliases** — YAML anchors (`&`) and aliases (`*`) are rejected with a clear error
+- **No custom tags** — Custom YAML tags (`!tag`) are not supported
+- **Index-based list comparison** — Lists compare by position, not content. Inserting at the start shifts all indices
 
-- **No custom tags:** Custom YAML tags (`!tag`) are not supported.
-
-- **Index-based list comparison:** Lists are compared by position (index), not by content matching. If you insert an element at the beginning of a list, all subsequent elements will show as changed.
-
-  ```yaml
-  # old.yaml          # new.yaml
-  items:              items:
-    - apple             - banana    # shows as: [0] apple -> banana
-    - cherry            - apple     # shows as: [1] cherry -> apple
-                        - cherry    # shows as: [2] added
-  ```
-
-- **Single-file implementation:** Designed for simplicity, not extensibility.
-
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Write tests for new functionality
-4. Submit a pull request
-
-Run tests with:
+## Testing
 
 ```bash
-pip install hypothesis pytest
+pip install pytest hypothesis pytest-cov
 pytest test_yaml_diff.py -v
 ```
 
+60 tests including property-based tests via Hypothesis. 93% code coverage.
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch
+3. Write tests for new functionality
+4. Submit a PR
+
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE)

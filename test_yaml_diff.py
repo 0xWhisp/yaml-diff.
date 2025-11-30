@@ -635,3 +635,314 @@ class TestEdgeCases:
         file.write_text("   \n# comment\n   \n# another\n")
         result = load_yaml(str(file))
         assert result is None
+
+
+# =============================================================================
+# Unit Tests for Output Formatters
+# =============================================================================
+
+class TestPathToJsonPointer:
+    """Unit tests for JSON pointer conversion."""
+    
+    def test_empty_path(self):
+        """Empty path should return empty string."""
+        assert path_to_json_pointer([]) == ''
+    
+    def test_simple_path(self):
+        """Simple path should be converted correctly."""
+        assert path_to_json_pointer(['foo', 'bar']) == '/foo/bar'
+    
+    def test_path_with_index(self):
+        """Path with numeric index should work."""
+        assert path_to_json_pointer(['items', '0', 'name']) == '/items/0/name'
+    
+    def test_escape_tilde(self):
+        """Tilde should be escaped as ~0."""
+        assert path_to_json_pointer(['key~name']) == '/key~0name'
+    
+    def test_escape_slash(self):
+        """Slash should be escaped as ~1."""
+        assert path_to_json_pointer(['key/name']) == '/key~1name'
+    
+    def test_escape_both(self):
+        """Both tilde and slash should be escaped correctly."""
+        assert path_to_json_pointer(['a~b/c']) == '/a~0b~1c'
+
+
+class TestFormatHuman:
+    """Unit tests for human-readable output formatting."""
+    
+    def test_empty_diffs(self):
+        """Empty diff list should return empty string."""
+        assert format_human([]) == ''
+    
+    def test_add_operation(self):
+        """Add operation should show + prefix."""
+        diffs = [DiffOp('add', ['key'], None, 'value')]
+        output = format_human(diffs, use_color=False)
+        assert '/key:' in output
+        assert '+ value' in output
+    
+    def test_remove_operation(self):
+        """Remove operation should show - prefix."""
+        diffs = [DiffOp('remove', ['key'], 'old_value', None)]
+        output = format_human(diffs, use_color=False)
+        assert '/key:' in output
+        assert '- old_value' in output
+    
+    def test_replace_operation(self):
+        """Replace operation should show both - and +."""
+        diffs = [DiffOp('replace', ['key'], 'old', 'new')]
+        output = format_human(diffs, use_color=False)
+        assert '/key:' in output
+        assert '- old' in output
+        assert '+ new' in output
+    
+    def test_with_color(self):
+        """Color codes should be included when use_color=True."""
+        diffs = [DiffOp('add', ['key'], None, 'value')]
+        output = format_human(diffs, use_color=True)
+        assert '\033[32m' in output  # green
+        assert '\033[0m' in output   # reset
+    
+    def test_null_value(self):
+        """None should be formatted as 'null'."""
+        diffs = [DiffOp('replace', ['key'], None, 'value')]
+        output = format_human(diffs, use_color=False)
+        assert '- null' in output
+    
+    def test_bool_value(self):
+        """Booleans should be formatted as 'true'/'false'."""
+        diffs = [DiffOp('replace', ['key'], True, False)]
+        output = format_human(diffs, use_color=False)
+        assert '- true' in output
+        assert '+ false' in output
+    
+    def test_dict_value(self):
+        """Dict values should be JSON formatted."""
+        diffs = [DiffOp('add', ['key'], None, {'nested': 'value'})]
+        output = format_human(diffs, use_color=False)
+        assert 'nested' in output
+        assert 'value' in output
+    
+    def test_root_path(self):
+        """Empty path should show as '/'."""
+        diffs = [DiffOp('replace', [], 'old', 'new')]
+        output = format_human(diffs, use_color=False)
+        assert '/:' in output
+
+
+class TestFormatJsonPatch:
+    """Unit tests for JSON-patch output formatting."""
+    
+    def test_empty_diffs(self):
+        """Empty diff list should return empty JSON array."""
+        output = format_json_patch([])
+        assert json_module.loads(output) == []
+    
+    def test_add_operation(self):
+        """Add operation should have correct structure."""
+        diffs = [DiffOp('add', ['key'], None, 'value')]
+        output = format_json_patch(diffs)
+        parsed = json_module.loads(output)
+        assert len(parsed) == 1
+        assert parsed[0]['op'] == 'add'
+        assert parsed[0]['path'] == '/key'
+        assert parsed[0]['value'] == 'value'
+    
+    def test_remove_operation(self):
+        """Remove operation should not have value field."""
+        diffs = [DiffOp('remove', ['key'], 'old', None)]
+        output = format_json_patch(diffs)
+        parsed = json_module.loads(output)
+        assert len(parsed) == 1
+        assert parsed[0]['op'] == 'remove'
+        assert parsed[0]['path'] == '/key'
+        assert 'value' not in parsed[0]
+    
+    def test_replace_operation(self):
+        """Replace operation should have new value."""
+        diffs = [DiffOp('replace', ['key'], 'old', 'new')]
+        output = format_json_patch(diffs)
+        parsed = json_module.loads(output)
+        assert len(parsed) == 1
+        assert parsed[0]['op'] == 'replace'
+        assert parsed[0]['path'] == '/key'
+        assert parsed[0]['value'] == 'new'
+
+
+class TestShouldUseColor:
+    """Unit tests for color detection."""
+    
+    def test_no_color_flag(self):
+        """--no-color flag should disable colors."""
+        assert should_use_color(no_color_flag=True) == False
+    
+    def test_default_checks_tty(self):
+        """Without flag, should check if stdout is TTY."""
+        # In test environment, stdout is usually not a TTY
+        result = should_use_color(no_color_flag=False)
+        assert isinstance(result, bool)
+
+
+# =============================================================================
+# Unit Tests for CLI (main function)
+# =============================================================================
+
+class TestCLI:
+    """Unit tests for CLI functionality."""
+    
+    def test_identical_files_exit_0(self, tmp_path):
+        """Identical files should exit with code 0."""
+        file1 = tmp_path / "file1.yaml"
+        file2 = tmp_path / "file2.yaml"
+        file1.write_text("key: value")
+        file2.write_text("key: value")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2)],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert result.stdout == ''
+    
+    def test_different_files_exit_1(self, tmp_path):
+        """Different files should exit with code 1."""
+        file1 = tmp_path / "file1.yaml"
+        file2 = tmp_path / "file2.yaml"
+        file1.write_text("key: old")
+        file2.write_text("key: new")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2)],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 1
+        assert '/key:' in result.stdout
+    
+    def test_file_not_found_exit_2(self, tmp_path):
+        """Missing file should exit with code 2."""
+        file1 = tmp_path / "exists.yaml"
+        file1.write_text("key: value")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), 'nonexistent.yaml'],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 2
+        assert 'error' in result.stderr.lower()
+    
+    def test_json_patch_flag(self, tmp_path):
+        """--json-patch flag should output JSON format."""
+        file1 = tmp_path / "file1.yaml"
+        file2 = tmp_path / "file2.yaml"
+        file1.write_text("key: old")
+        file2.write_text("key: new")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2), '--json-patch'],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 1
+        parsed = json_module.loads(result.stdout)
+        assert isinstance(parsed, list)
+        assert parsed[0]['op'] == 'replace'
+    
+    def test_short_json_flag(self, tmp_path):
+        """-j flag should work same as --json-patch."""
+        file1 = tmp_path / "file1.yaml"
+        file2 = tmp_path / "file2.yaml"
+        file1.write_text("key: old")
+        file2.write_text("key: new")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2), '-j'],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 1
+        parsed = json_module.loads(result.stdout)
+        assert isinstance(parsed, list)
+    
+    def test_help_flag(self):
+        """--help should show usage information."""
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', '--help'],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0
+        assert 'usage' in result.stdout.lower()
+        assert 'yaml-diff' in result.stdout.lower()
+    
+    def test_invalid_yaml_exit_2(self, tmp_path):
+        """Invalid YAML should exit with code 2."""
+        file1 = tmp_path / "valid.yaml"
+        file2 = tmp_path / "invalid.yaml"
+        file1.write_text("key: value")
+        file2.write_text("key: [unclosed")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2)],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 2
+        assert 'error' in result.stderr.lower()
+    
+    def test_anchor_rejected_exit_2(self, tmp_path):
+        """YAML with anchors should exit with code 2."""
+        file1 = tmp_path / "normal.yaml"
+        file2 = tmp_path / "anchor.yaml"
+        file1.write_text("key: value")
+        file2.write_text("key: &anchor value")
+        
+        import subprocess
+        result = subprocess.run(
+            ['python', 'yaml_diff.py', str(file1), str(file2)],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 2
+        assert 'anchor' in result.stderr.lower()
+
+
+class TestCanonicalizeFunction:
+    """Unit tests for canonicalize function."""
+    
+    def test_sorts_dict_keys(self):
+        """Dict keys should be sorted."""
+        data = {'z': 1, 'a': 2, 'm': 3}
+        result = canonicalize(data)
+        assert list(result.keys()) == ['a', 'm', 'z']
+    
+    def test_preserves_list_order(self):
+        """List order should be preserved."""
+        data = [3, 1, 2]
+        result = canonicalize(data)
+        assert result == [3, 1, 2]
+    
+    def test_recursive_sort(self):
+        """Nested dicts should also be sorted."""
+        data = {'b': {'z': 1, 'a': 2}, 'a': 1}
+        result = canonicalize(data)
+        assert list(result.keys()) == ['a', 'b']
+        assert list(result['b'].keys()) == ['a', 'z']
+    
+    def test_primitives_unchanged(self):
+        """Primitives should pass through unchanged."""
+        assert canonicalize(42) == 42
+        assert canonicalize('hello') == 'hello'
+        assert canonicalize(None) is None
+        assert canonicalize(True) is True
