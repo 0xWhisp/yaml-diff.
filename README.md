@@ -1,8 +1,11 @@
 # yaml-diff
 
-[![Tests](https://github.com/0xWhisp/yaml-diff/actions/workflows/test.yml/badge.svg)](https://github.com/0xWhisp/yaml-diff/actions)
-[![Coverage Status](https://coveralls.io/repos/github/0xWhisp/yaml-diff/badge.svg?branch=master)](https://coveralls.io/github/0xWhisp/yaml-diff?branch=master)
+[![Build Status](https://github.com/0xWhisp/yaml-diff/actions/workflows/test.yml/badge.svg)](https://github.com/0xWhisp/yaml-diff/actions)
+[![Coverage Status](https://coveralls.io/repos/github/0xWhisp/yaml-diff/badge.svg?branch=main)](https://coveralls.io/github/0xWhisp/yaml-diff?branch=main)
+[![Code Quality](https://app.codacy.com/project/badge/Grade/0xWhisp/yaml-diff)](https://app.codacy.com/gh/0xWhisp/yaml-diff/dashboard)
+[![CodeFactor](https://www.codefactor.io/repository/github/0xwhisp/yaml-diff/badge)](https://www.codefactor.io/repository/github/0xwhisp/yaml-diff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 
 Semantic YAML comparison tool. Compares two YAML files ignoring key ordering, comments, and formatting — outputs only actual data differences.
 
