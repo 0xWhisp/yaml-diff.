@@ -14,6 +14,11 @@ from yaml_diff import (
     check_unsupported_features,
     compute_diff,
     canonicalize,
+    path_to_json_pointer,
+    format_json_patch,
+    format_human,
+    should_use_color,
+    compute_exit_code,
 )
 
 
@@ -343,6 +348,82 @@ def test_type_change_detection(value1, value2):
     assert diffs[0].new_value == value2
 
 
+# **Feature: yaml-diff, Property 6: Exit Code Correctness**
+# **Validates: Requirements 6.3**
+@given(
+    value1=yaml_values,
+    value2=yaml_values
+)
+@settings(max_examples=100)
+def test_exit_code_correctness(value1, value2):
+    """
+    Property 6: Exit Code Correctness
+    
+    For any two YAML values that are not identical, the tool SHALL exit with code 1.
+    For identical values, the tool SHALL exit with code 0.
+    """
+    exit_code = compute_exit_code(value1, value2)
+    
+    # Canonicalize both values for comparison
+    canon1 = canonicalize(value1)
+    canon2 = canonicalize(value2)
+    
+    if canon1 == canon2:
+        assert exit_code == 0, f"Expected exit code 0 for identical values, got {exit_code}"
+    else:
+        assert exit_code == 1, f"Expected exit code 1 for different values, got {exit_code}"
+
+
+import json as json_module
+
+
+# **Feature: yaml-diff, Property 7: JSON-Patch Validity**
+# **Validates: Requirements 5.2**
+@given(
+    old_value=yaml_values,
+    new_value=yaml_values
+)
+@settings(max_examples=100)
+def test_json_patch_validity(old_value, new_value):
+    """
+    Property 7: JSON-Patch Validity
+    
+    For any diff result, the JSON-patch output SHALL be valid JSON conforming
+    to RFC 6902 schema (array of objects with 'op', 'path', and optionally 'value' fields).
+    """
+    diffs = compute_diff(old_value, new_value)
+    json_output = format_json_patch(diffs)
+    
+    # Must be valid JSON
+    parsed = json_module.loads(json_output)
+    
+    # Must be an array
+    assert isinstance(parsed, list), f"JSON-patch must be an array, got {type(parsed)}"
+    
+    # Each operation must conform to RFC 6902
+    valid_ops = {'add', 'remove', 'replace', 'move', 'copy', 'test'}
+    
+    for op in parsed:
+        # Must be an object
+        assert isinstance(op, dict), f"Each operation must be an object, got {type(op)}"
+        
+        # Must have 'op' field
+        assert 'op' in op, "Operation must have 'op' field"
+        assert op['op'] in valid_ops, f"Invalid op: {op['op']}"
+        
+        # Must have 'path' field
+        assert 'path' in op, "Operation must have 'path' field"
+        assert isinstance(op['path'], str), "Path must be a string"
+        
+        # 'add' and 'replace' must have 'value' field
+        if op['op'] in ('add', 'replace'):
+            assert 'value' in op, f"'{op['op']}' operation must have 'value' field"
+        
+        # 'remove' should not have 'value' field (per RFC 6902)
+        if op['op'] == 'remove':
+            assert 'value' not in op, "'remove' operation should not have 'value' field"
+
+
 # =============================================================================
 # Unit Tests for check_unsupported_features
 # =============================================================================
@@ -424,4 +505,133 @@ class TestLoadYaml:
         empty_yaml = tmp_path / "empty.yaml"
         empty_yaml.write_text("")
         result = load_yaml(str(empty_yaml))
+        assert result is None
+
+
+# =============================================================================
+# Unit Tests for Edge Cases (Requirements 7.1, 7.2)
+# =============================================================================
+
+class TestEdgeCases:
+    """Unit tests for edge case handling."""
+    
+    def test_empty_file_returns_none(self, tmp_path):
+        """Empty file should be treated as null value (Requirements 7.1)."""
+        empty_file = tmp_path / "empty.yaml"
+        empty_file.write_text("")
+        result = load_yaml(str(empty_file))
+        assert result is None
+    
+    def test_comment_only_file_returns_none(self, tmp_path):
+        """Comment-only file should be treated as empty document (Requirements 7.2)."""
+        comment_file = tmp_path / "comments.yaml"
+        comment_file.write_text("# This is a comment\n# Another comment\n")
+        result = load_yaml(str(comment_file))
+        assert result is None
+    
+    def test_empty_vs_empty_no_diff(self, tmp_path):
+        """Two empty files should produce no diff."""
+        diffs = compute_diff(None, None)
+        assert diffs == []
+    
+    def test_empty_vs_content_produces_diff(self, tmp_path):
+        """Empty file vs file with content should produce diff."""
+        diffs = compute_diff(None, {"key": "value"})
+        assert len(diffs) == 1
+        assert diffs[0].op == "replace"
+        assert diffs[0].old_value is None
+        assert diffs[0].new_value == {"key": "value"}
+    
+    def test_content_vs_empty_produces_diff(self, tmp_path):
+        """File with content vs empty file should produce diff."""
+        diffs = compute_diff({"key": "value"}, None)
+        assert len(diffs) == 1
+        assert diffs[0].op == "replace"
+        assert diffs[0].old_value == {"key": "value"}
+        assert diffs[0].new_value is None
+    
+    def test_deeply_nested_structure(self):
+        """Deeply nested structures (5+ levels) should be handled correctly."""
+        deep = {
+            "level1": {
+                "level2": {
+                    "level3": {
+                        "level4": {
+                            "level5": {
+                                "level6": "deep_value"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        # Same structure should produce no diff
+        diffs = compute_diff(deep, deep)
+        assert diffs == []
+        
+        # Modified deep value should be detected
+        import copy
+        modified = copy.deepcopy(deep)
+        modified["level1"]["level2"]["level3"]["level4"]["level5"]["level6"] = "changed"
+        
+        diffs = compute_diff(deep, modified)
+        assert len(diffs) == 1
+        assert diffs[0].op == "replace"
+        assert diffs[0].path == ["level1", "level2", "level3", "level4", "level5", "level6"]
+        assert diffs[0].old_value == "deep_value"
+        assert diffs[0].new_value == "changed"
+    
+    def test_deeply_nested_list(self):
+        """Deeply nested lists should be handled correctly."""
+        deep = [[[[["deep_item"]]]]]
+        
+        # Same structure should produce no diff
+        diffs = compute_diff(deep, deep)
+        assert diffs == []
+        
+        # Modified deep value should be detected
+        import copy
+        modified = copy.deepcopy(deep)
+        modified[0][0][0][0][0] = "changed"
+        
+        diffs = compute_diff(deep, modified)
+        assert len(diffs) == 1
+        assert diffs[0].op == "replace"
+        assert diffs[0].path == ["0", "0", "0", "0", "0"]
+    
+    def test_mixed_deep_nesting(self):
+        """Mixed maps and lists at deep nesting should work."""
+        deep = {
+            "items": [
+                {
+                    "nested": [
+                        {"value": 42}
+                    ]
+                }
+            ]
+        }
+        
+        import copy
+        modified = copy.deepcopy(deep)
+        modified["items"][0]["nested"][0]["value"] = 100
+        
+        diffs = compute_diff(deep, modified)
+        assert len(diffs) == 1
+        assert diffs[0].path == ["items", "0", "nested", "0", "value"]
+        assert diffs[0].old_value == 42
+        assert diffs[0].new_value == 100
+    
+    def test_whitespace_only_file(self, tmp_path):
+        """File with only whitespace (spaces/newlines) should be treated as empty."""
+        ws_file = tmp_path / "whitespace.yaml"
+        ws_file.write_text("   \n\n   ")
+        result = load_yaml(str(ws_file))
+        assert result is None
+    
+    def test_comment_with_whitespace(self, tmp_path):
+        """File with comments and whitespace should be treated as empty."""
+        file = tmp_path / "mixed.yaml"
+        file.write_text("   \n# comment\n   \n# another\n")
+        result = load_yaml(str(file))
         assert result is None

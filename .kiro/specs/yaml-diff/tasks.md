@@ -156,63 +156,103 @@
 
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement output formatters
-  - [ ] 7.1 Implement `path_to_json_pointer()` function
+- [x] 7. Implement output formatters
+
+
+
+
+
+  - [x] 7.1 Implement `path_to_json_pointer()` function
+
+
     - Convert path list to JSON pointer format (/foo/bar/0)
     - Escape special characters per RFC 6901
     - _Requirements: 5.2_
-  - [ ] 7.2 Implement `format_json_patch()` function
+
+  - [x] 7.2 Implement `format_json_patch()` function
+
     - Convert DiffOp list to JSON-patch array
     - Output valid JSON conforming to RFC 6902
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
-  - [ ] 7.3 Implement `format_human()` function
+
+  - [x] 7.3 Implement `format_human()` function
+
     - Format diffs as human-readable output
     - Show path, old value (with -), new value (with +)
     - Support colorization (green for add, red for remove)
     - _Requirements: 4.1, 4.2, 4.4_
-  - [ ] 7.4 Implement color detection
+
+  - [x] 7.4 Implement color detection
+
     - Check if stdout is a TTY
     - Respect --no-color flag
     - _Requirements: 4.2, 4.3_
-  - [ ] 7.5 Write property test for JSON-patch validity
+
+  - [x] 7.5 Write property test for JSON-patch validity
+
     - **Property 7: JSON-Patch Validity** - output is valid JSON with correct schema
     - **Validates: Requirements 5.2**
 
-- [ ] 8. Implement CLI interface
-  - [ ] 8.1 Implement argument parser
+- [x] 8. Implement CLI interface
+  - [x] 8.1 Implement argument parser
     - Positional args: file1, file2
     - Optional flags: --json-patch/-j, --no-color, --help/-h
     - _Requirements: 6.1, 6.5_
-  - [ ] 8.2 Implement `main()` function
+  - [x] 8.2 Implement `main()` function
     - Parse arguments
     - Load and validate both YAML inputs
     - Compute diff
     - Format and output results
     - Return appropriate exit code
     - _Requirements: 6.2, 6.3, 6.4_
-  - [ ] 8.3 Add entry point (`if __name__ == '__main__'`)
+  - [x] 8.3 Add entry point (`if __name__ == '__main__'`)
     - Call main() and sys.exit with return code
     - _Requirements: 6.2, 6.3_
-  - [ ] 8.4 Write property test for exit code correctness
+  - [x] 8.4 Write property test for exit code correctness
+
+
     - **Property 6: Exit Code Correctness** - different values produce exit code 1
     - **Validates: Requirements 6.3**
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
+
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Handle edge cases
-  - [ ] 10.1 Handle empty files
+- [x] 10. Handle edge cases
+
+
+
+
+
+
+  - [x] 10.1 Handle empty files
+
     - Treat empty file as null value
     - _Requirements: 7.1_
-  - [ ] 10.2 Handle comment-only files
+
+  - [x] 10.2 Handle comment-only files
+
     - Treat as empty document (null)
     - _Requirements: 7.2_
-  - [ ] 10.3 Write unit tests for edge cases
+
+  - [x] 10.3 Write unit tests for edge cases
+
     - Test empty files, comment-only files, deeply nested structures
     - _Requirements: 7.1, 7.2_
 
-- [ ] 11. Create documentation
-  - [ ] 11.1 Create `README.md`
+- [x] 11. Create documentation
+
+
+
+
+
+
+  - [x] 11.1 Create `README.md`
+
     - Overview section explaining what yaml-diff does
     - Installation instructions (pip install, or run directly)
     - Usage examples with sample commands
@@ -221,5 +261,10 @@
     - License reference
     - _Requirements: 8.3, 8.4, 10.3, 10.4_
 
-- [ ] 12. Final Checkpoint - Ensure all tests pass
+- [x] 12. Final Checkpoint - Ensure all tests pass
+
+
+
+
+
   - Ensure all tests pass, ask the user if questions arise.
